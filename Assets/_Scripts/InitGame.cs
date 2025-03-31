@@ -14,26 +14,30 @@ public class InitGame : MonoBehaviour
     [SerializeField]
     private Tilemap wallTile;
 
+    private static Dictionary<Vector2Int, HashSet<Vector2Int>> rooms =
+        new Dictionary<Vector2Int, HashSet<Vector2Int>>();
+
     private HashSet<Vector2Int> floorPositions;
+
+    public static void SaveRoom(Vector2Int roomPosition, HashSet<Vector2Int> roomFloor)
+    {
+        rooms[roomPosition] = new HashSet<Vector2Int>(roomFloor);
+    }
+
+    public static void ClearRooms()
+    {
+        rooms.Clear();
+    }
 
     void Start()
     {
+        ClearRooms();
         GenerateLevel();
     }
 
     public void GenerateLevel()
     {
         dungeonGenerator.GenerateDungeon();
-
-        SimpleRandomWalkDungeonGenerator walkGenerator =
-            dungeonGenerator as SimpleRandomWalkDungeonGenerator;
-        System.Reflection.MethodInfo runRandomWalkMethod =
-            typeof(SimpleRandomWalkDungeonGenerator).GetMethod(
-                "RunRandomWalk",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
-            );
-
-        floorPositions = (HashSet<Vector2Int>)runRandomWalkMethod.Invoke(walkGenerator, null);
 
         SetupCollision();
         SpawnPlayer();
@@ -51,9 +55,12 @@ public class InitGame : MonoBehaviour
 
     private void SpawnPlayer()
     {
-        PlayerMovement player = FindFirstObjectByType<PlayerMovement>();
-        Vector2Int randomPos = floorPositions.ElementAt(Random.Range(0, floorPositions.Count));
-        Vector3 worldPos = new Vector3(randomPos.x + 0.5f, randomPos.y + 0.5f, 0);
+        int roomIndex = Random.Range(0, rooms.Count);
+        KeyValuePair<Vector2Int, HashSet<Vector2Int>> room = rooms.ElementAt(roomIndex);
+        List<Vector2Int> roomFloors = new List<Vector2Int>(room.Value);
+
+        Vector2Int spawnPos = roomFloors[Random.Range(0, roomFloors.Count)];
+        Vector3 worldPos = new Vector3(spawnPos.x + 0.5f, spawnPos.y + 0.5f, 0);
         player.transform.position = worldPos;
     }
 }
